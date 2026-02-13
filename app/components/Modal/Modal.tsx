@@ -1,4 +1,6 @@
-import { useEffect, type ReactNode } from "react";
+'use client';
+
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import css from "./Modal.module.css";
 
@@ -7,10 +9,16 @@ interface ModalProps {
   onClose: () => void;
 }
 
-const modalRoot = document.querySelector("#modal-root") as HTMLElement;
+const subscribe = () => () => {};
+const getSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export const Modal = ({ children, onClose }: ModalProps) => {
+  const isMounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
   useEffect(() => {
+    if (!isMounted) return;
+
     const originalStyle = window.getComputedStyle(document.body).overflow;
     document.body.style.overflow = "hidden";
 
@@ -23,9 +31,14 @@ export const Modal = ({ children, onClose }: ModalProps) => {
       document.body.style.overflow = originalStyle;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, [isMounted, onClose]);
 
-  return createPortal (
+  if (!isMounted) return null;
+
+  const modalRoot = document.getElementById('modal-root');
+  if (!modalRoot) return null;
+
+  return createPortal(
     <div className={css.backdrop} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={css.modal}>
         {children}
